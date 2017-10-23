@@ -1,0 +1,9 @@
+freeipa_server_version: 4.3.1
+freeipa_server_dns_version: 4.3.1
+server_alias: ipa
+server_hostname: ipa.powerupcloud.com
+domain: powerupcloud.com
+realm: POWERUPCLOUD.COM
+principal_user: admin
+principal_user_password: puc123
+directory_manager_password: puc123

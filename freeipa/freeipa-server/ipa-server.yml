@@ -1,0 +1,5 @@
+- hosts: '{{ host }}'
+  user: root
+  become: yes
+  roles:
+    - server

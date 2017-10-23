@@ -1,0 +1,25 @@
+- name: Install the ipa-server and ipa-server-dns packages
+  apt:
+    name: "freeipa-server={{ freeipa_server_version }}*"
+    state: present
+    name: "freeipa-server-dns={{ freeipa_server_dns_version }}*"
+    state: present
+
+- name: Get the Private IP
+  command: curl http://169.254.169.254/latest/meta-data/local-ipv4 
+  register: privateip
+
+- name: Add IP address of all hosts to all hosts
+  lineinfile:
+    dest: /etc/hosts
+    line: "{{ item }} {{ server_hostname }}"
+    state: present
+  with_items: "{{ privateip.stdout }}"
+
+- name: Run the ipa-server-install command
+  command: ipa-server-install -U --hostname={{ server_hostname }} --domain={{ domain }} --realm={{ realm }} --ds-password={{ directory_manager_password }} --admin-password={{ principal_user_password }} 
+
+- name: update apache virtual host with redirection rules for https
+  action: template src='templates/000-default.conf' dest='/etc/apache2/sites-available/000-default.conf' backup=yes
+  notify:
+    - restart apache2

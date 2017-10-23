@@ -1,0 +1,48 @@
+- name: Install FreeIPA client
+  apt: 
+    update_cache: yes
+    name: "freeipa-client={{ freeipa_client_version }}*"
+    state: present
+
+- name: Allow members of the admin groups to use sudo
+  template:
+    src: template/80-freeipa-admins.j2
+    dest: /etc/sudoers.d/freeipa-admins
+    owner: root
+    group: root
+    mode: 0660
+
+- name: Test for pam_mkhomedir.so
+  shell: grep "pam_mkhomedir.so" /etc/pam.d/common-session
+  register: test_grep
+  ignore_errors: yes
+
+- name: Enable auto creation of LDAP user folders
+  lineinfile: 
+    dest: /etc/pam.d/common-session
+    line: "session required pam_mkhomedir.so"
+  when: test_grep.stdout == ""
+
+- name: Add hostname.jinka.in as ipa client
+  shell: hostname
+  register: client_hostname_value
+
+- set_fact:
+    client_hostname: "{{ client_hostname_value.stdout }}.jinka.in"
+
+- template:
+    src: template/ca.crt
+    dest: /etc/ipa/ca.crt
+
+- name: Run the ipa-client-install command
+  ignore_errors: yes
+  command: ipa-client-install -U --domain={{ domain }} --hostname={{ client_hostname }} --server={{ server_hostname }} --realm={{ realm }} --password={{ principal_user_password }} --principal={{ principal_user }} --mkhomedir --ca-cert-file /etc/ipa/ca.crt
+
+- name: Set ChallengeResponseAuthentication to yes
+  lineinfile: >
+     dest='/etc/ssh/sshd_config'
+     regexp='^ChallengeResponseAuthentication'
+     state=present
+     line='ChallengeResponseAuthentication yes'
+  notify:
+     - restart ssh
